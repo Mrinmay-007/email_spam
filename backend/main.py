@@ -2,14 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
-from preprocess import transform_text
+from backend.pre_process import transform_text
 
 app = FastAPI(title="Spam Detector API")
 
 # Allow frontend (any origin) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*",
+                   "https://sms-spam-detect.vercel.app"],
     allow_methods=["POST"],
     allow_headers=["*"],
 )
