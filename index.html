@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spam Detector</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #151820;
+      --border:    #252a35;
+      --muted:     #4a5168;
+      --text:      #e8eaf0;
+      --subtext:   #8b90a4;
+      --accent:    #7c6af7;
+      --accent-lo: #7c6af715;
+      --spam:      #f05a5a;
+      --spam-lo:   #f05a5a18;
+      --safe:      #3ecf8e;
+      --safe-lo:   #3ecf8e18;
+      --radius:    14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-lo);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .08em;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 18px;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .35; }
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1.1;
+    }
+
+    h1 span { color: var(--accent); }
+
+    header p {
+      margin-top: 10px;
+      color: var(--subtext);
+      font-size: 15px;
+      max-width: 380px;
+      margin-inline: auto;
+      line-height: 1.55;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtext);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 140px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.6;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    textarea:focus { border-color: var(--accent); }
+
+    .char-count {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: .01em;
+      transition: opacity .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover:not(:disabled) { opacity: .88; }
+    button:active:not(:disabled) { transform: scale(.98); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid #ffffff55;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result ── */
+    .result-box {
+      margin-top: 24px;
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      display: none;
+      border: 1px solid;
+      animation: slideIn .3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-box.spam {
+      background: var(--spam-lo);
+      border-color: var(--spam);
+    }
+
+    .result-box.safe {
+      background: var(--safe-lo);
+      border-color: var(--safe);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .result-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .result-label {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .result-box.spam  .result-label { color: var(--spam); }
+    .result-box.safe  .result-label { color: var(--safe); }
+
+    /* Confidence bar */
+    .conf-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .conf-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--subtext);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .conf-value {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+    }
+
+    .bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+
+    .spam .bar-fill { background: var(--spam); }
+    .safe .bar-fill { background: var(--safe); }
+
+    /* ── Error ── */
+    .error-box {
+      margin-top: 16px;
+      background: #f05a5a10;
+      border: 1px solid var(--spam);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--spam);
+      display: none;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    footer code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">ML-POWERED</div>
+    <h1>Sms - Spam <span>Detector</span></h1>
+    <p>Paste any message below and the model will classify it instantly.</p>
+  </header>
+
+  <div class="card">
+    <label for="msgInput">Message</label>
+    <textarea
+      id="msgInput"
+      placeholder="e.g. Congratulations! You've won a free iPhone. Click here to claim…"
+      maxlength="2000"
+    ></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 2000</div>
+
+    <button id="analyzeBtn" onclick="analyzeMessage()">
+      <span id="btnText">Analyze Message</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-header">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-label" id="resultLabel"></div>
+      </div>
+      <div class="conf-row">
+        <span class="conf-title">Spam confidence</span>
+        <span class="conf-value" id="confValue">—</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="barFill"></div>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <footer>
+    Backend: <code>FastAPI</code> &nbsp;·&nbsp; Model: <code>Naive Bayes + TF-IDF</code>
+  </footer>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000/predict";   // ← change if hosted elsewhere
+
+    const textarea   = document.getElementById("msgInput");
+    const charCount  = document.getElementById("charCount");
+    const btn        = document.getElementById("analyzeBtn");
+    const btnText    = document.getElementById("btnText");
+    const spinner    = document.getElementById("spinner");
+    const resultBox  = document.getElementById("resultBox");
+    const resultIcon = document.getElementById("resultIcon");
+    const resultLabel= document.getElementById("resultLabel");
+    const confValue  = document.getElementById("confValue");
+    const barFill    = document.getElementById("barFill");
+    const errorBox   = document.getElementById("errorBox");
+
+    // Live char counter
+    textarea.addEventListener("input", () => {
+      charCount.textContent = textarea.value.length;
+    });
+
+    async function analyzeMessage() {
+      const message = textarea.value.trim();
+
+      if (!message) {
+        showError("Please enter a message before analyzing.");
+        return;
+      }
+
+      // Loading state
+      setLoading(true);
+      hideResult();
+      hideError();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+        const data = await res.json();
+        showResult(data.result, data.confidence);
+
+      } catch (err) {
+        showError("Could not reach the API. Make sure the backend is running on port 8000.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function showResult(result, confidence) {
+      const isSpam = result === "Spam";
+
+      resultBox.className = "result-box " + (isSpam ? "spam" : "safe");
+      resultIcon.textContent = isSpam ? "🚨" : "✅";
+      resultLabel.textContent = isSpam ? "Spam Detected" : "Not Spam";
+
+      const pct = (confidence * 100).toFixed(1);
+      confValue.textContent = pct + "%";
+
+      resultBox.style.display = "block";
+      // Animate bar after display
+      requestAnimationFrame(() => {
+        barFill.style.width = pct + "%";
+      });
+    }
+
+    function hideResult() {
+      resultBox.style.display = "none";
+      barFill.style.width = "0%";
+    }
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = "block";
+    }
+
+    function hideError() {
+      errorBox.style.display = "none";
+    }
+
+    function setLoading(on) {
+      btn.disabled = on;
+      btnText.textContent = on ? "Analyzing…" : "Analyze Message";
+      spinner.style.display = on ? "block" : "none";
+    }
+
+    // Allow Ctrl+Enter to submit
+    textarea.addEventListener("keydown", e => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyzeMessage();
+    });
+  </script>
+</body>
+</html>
