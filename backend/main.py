@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pickle
-from backend.pre_process import transform_text
+from .pre_process import transform_text
 
 app = FastAPI(title="Spam Detector API")
 
